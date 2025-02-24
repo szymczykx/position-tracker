@@ -1,0 +1,31 @@
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 数据库配置
+DB_CONFIG = {
+    'path': os.path.join(BASE_DIR, 'positions.db'),
+    'retry_attempts': 3,
+    'retry_delay': 1
+}
+
+# API配置
+API_CONFIG = {
+    'base_url': 'YOUR_API_BASE_URL',
+    'portfolio_id': 'YOUR_PORTFOLIO_ID',
+    'request_timeout': 10
+}
+
+# 通知配置
+NOTIFICATION_CONFIG = {
+    'bark_key': 'YOUR_BARK_KEY',
+    'bark_url': 'YOUR_BARK_SERVER_URL',
+    'group': 'YOUR_GROUP_NAME',
+    'icon': 'YOUR_ICON_URL'
+}
+
+# 程序配置
+APP_CONFIG = {
+    'polling_interval': 2,  # 轮询间隔（秒）
+    'max_retries': 3  # 最大重试次数
+}
