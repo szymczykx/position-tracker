@@ -9,6 +9,7 @@ from functools import wraps
 from typing import List, Optional
 from config import *
 from models import Position
+from notifications import send_bark_notification, send_telegram_message
 
 # 设置绝对路径
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -131,16 +132,13 @@ class PositionTracker:
         raise Exception(f"API请求失败: {response.status_code}")
 
     def send_notification(self, message: str):
-        base_url = f"{NOTIFICATION_CONFIG['bark_url']}/{NOTIFICATION_CONFIG['bark_key']}/haywarPosition/"
-        params = {
-            "group": NOTIFICATION_CONFIG['group'],
-            "icon": NOTIFICATION_CONFIG['icon'],
-            "level": "critical",
-            "volume": "5",
-            "call": "1"
-        }
+        """发送通知到多个渠道"""
         try:
-            requests.get(base_url + message, params=params, timeout=5)
+            # 发送到Bark
+            send_bark_notification("haywarPosition", message)
+            
+            # 发送到Telegram
+            send_telegram_message(message)
         except Exception as e:
             logger.error(f"发送通知失败: {str(e)}")
 

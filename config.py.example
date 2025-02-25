@@ -21,7 +21,10 @@ NOTIFICATION_CONFIG = {
     'bark_key': 'YOUR_BARK_KEY',
     'bark_url': 'YOUR_BARK_SERVER_URL',
     'group': 'YOUR_GROUP_NAME',
-    'icon': 'YOUR_ICON_URL'
+    'icon': 'YOUR_ICON_URL',
+    # Telegram配置
+    'telegram_bot_token': 'YOUR_TELEGRAM_BOT_TOKEN',  # 从BotFather获取的机器人Token
+    'telegram_chat_id': 'YOUR_TELEGRAM_CHAT_ID'  # 频道ID或聊天ID
 }
 
 # 程序配置
