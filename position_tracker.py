@@ -60,7 +60,7 @@ class DatabaseManager:
                 leverage INTEGER,
                 position_side TEXT,
                 break_even_price REAL,
-                adl INTEGER,
+                position_amount REAL,
                 created_at TIMESTAMP
             )
             ''')
@@ -74,9 +74,9 @@ class DatabaseManager:
                 data = position.to_dict()
                 cursor.execute('''
                 INSERT INTO positions (symbol, entry_price, leverage, position_side, 
-                                    break_even_price, adl, created_at)
+                                    break_even_price, position_amount, created_at)
                 VALUES (:symbol, :entry_price, :leverage, :position_side, 
-                        :break_even_price, :adl, :created_at)
+                        :break_even_price, :position_amount, :created_at)
                 ''', data)
             conn.commit()
 
@@ -85,7 +85,7 @@ class DatabaseManager:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-            SELECT * FROM positions WHERE adl != 0
+            SELECT * FROM positions WHERE position_amount != 0
             ORDER BY created_at DESC
             ''')
             rows = cursor.fetchall()
@@ -98,10 +98,20 @@ class DatabaseManager:
             return positions
 
     @retry_on_error()
-    def reset_position_adl(self, symbol: str) -> int:
+    def close_position(self, symbol: str) -> int:
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('UPDATE positions SET adl = 0 WHERE symbol = ? AND adl != 0', (symbol,))
+            cursor.execute('UPDATE positions SET position_amount = 0 WHERE symbol = ? AND position_amount != 0', (symbol,))
+            affected = cursor.rowcount
+            conn.commit()
+            return affected
+            
+    @retry_on_error()
+    def update_position_amount(self, symbol: str, position_amount: float) -> int:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE positions SET position_amount = ? WHERE symbol = ? AND position_amount != 0', 
+                          (position_amount, symbol))
             affected = cursor.rowcount
             conn.commit()
             return affected
@@ -117,7 +127,7 @@ class PositionTracker:
         logger.info(f"API请求状态码: {response.status_code}")
         if response.status_code == 200:
             data = response.json()
-            return [Position.from_api_data(pos) for pos in data['data'] if pos['adl'] != 0]
+            return [Position.from_api_data(pos) for pos in data['data'] if abs(float(pos['positionAmount'])) > 0]
         raise Exception(f"API请求失败: {response.status_code}")
 
     def send_notification(self, message: str):
@@ -139,12 +149,16 @@ class PositionTracker:
             current_positions = self.fetch_positions()
             active_positions = self.db.get_active_positions()
             
+            # 构建当前持仓和活跃持仓的字典，方便比较
+            current_positions_dict = {pos.symbol: pos for pos in current_positions}
+            active_positions_dict = {pos.symbol: pos for pos in active_positions}
+            
             # 处理已关闭的仓位
-            current_symbols = {pos.symbol for pos in current_positions}
-            active_symbols = {pos.symbol for pos in active_positions}
+            current_symbols = set(current_positions_dict.keys())
+            active_symbols = set(active_positions_dict.keys())
             
             for closed_symbol in active_symbols - current_symbols:
-                self.db.reset_position_adl(closed_symbol)
+                self.db.close_position(closed_symbol)
                 self.send_notification(f"仓位已关闭：{closed_symbol}")
             
             # 处理新开仓位
@@ -159,7 +173,28 @@ class PositionTracker:
                         f"交易对: {pos.symbol}\n"
                         f"开仓价格: {pos.entry_price}\n"
                         f"杠杆倍数: {pos.leverage}x\n"
-                        f"方向: {pos.position_side}"
+                        f"方向: {pos.position_side}\n"
+                        f"仓位大小: {pos.position_amount}"
+                    )
+            
+            # 处理仓位变动（加仓/减仓）
+            for symbol in current_symbols & active_symbols:
+                current_pos = current_positions_dict[symbol]
+                active_pos = active_positions_dict[symbol]
+                
+                if abs(current_pos.position_amount) != abs(active_pos.position_amount):
+                    old_amount = active_pos.position_amount
+                    new_amount = current_pos.position_amount
+                    change_type = "加仓" if abs(new_amount) > abs(old_amount) else "减仓"
+                    
+                    self.db.update_position_amount(symbol, new_amount)
+                    self.send_notification(
+                        f"{change_type}\n"
+                        f"交易对: {symbol}\n"
+                        f"变更前仓位: {old_amount}\n"
+                        f"变更后仓位: {new_amount}\n"
+                        f"开仓价格: {current_pos.entry_price}\n"
+                        f"方向: {current_pos.position_side}"
                     )
         
         except Exception as e:

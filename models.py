@@ -8,7 +8,7 @@ class Position:
     leverage: int
     position_side: str
     break_even_price: float
-    adl: int
+    position_amount: float
     created_at: datetime = None
 
     @classmethod
@@ -19,7 +19,7 @@ class Position:
             leverage=int(data['leverage']),
             position_side=data['positionSide'],
             break_even_price=float(data['breakEvenPrice']),
-            adl=int(data['adl']),
+            position_amount=float(data['positionAmount']),
             created_at=datetime.now()
         )
 
@@ -30,6 +30,6 @@ class Position:
             'leverage': self.leverage,
             'position_side': self.position_side,
             'break_even_price': self.break_even_price,
-            'adl': self.adl,
+            'position_amount': self.position_amount,
             'created_at': self.created_at
         }
