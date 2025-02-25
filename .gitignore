@@ -1,16 +1,11 @@
-# Python
 __pycache__/
 *.py[cod]
 *$py.class
 
-# data
 *.db
 *.log
 
-# IDE
 config.py
-
-# virtualenv
 .env
 venv/
 env/
