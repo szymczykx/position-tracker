@@ -10,7 +10,6 @@ class Position:
     break_even_price: float
     adl: int
     created_at: datetime = None
-    notified: bool = False  # 新增通知状态字段
 
     @classmethod
     def from_api_data(cls, data: dict):
@@ -21,8 +20,7 @@ class Position:
             position_side=data['positionSide'],
             break_even_price=float(data['breakEvenPrice']),
             adl=int(data['adl']),
-            created_at=datetime.now(),
-            notified=False
+            created_at=datetime.now()
         )
 
     def to_dict(self):
@@ -33,6 +31,5 @@ class Position:
             'position_side': self.position_side,
             'break_even_price': self.break_even_price,
             'adl': self.adl,
-            'created_at': self.created_at,
-            'notified': self.notified
+            'created_at': self.created_at
         }

@@ -88,8 +88,14 @@ class DatabaseManager:
             SELECT * FROM positions WHERE adl != 0
             ORDER BY created_at DESC
             ''')
-            return [Position(**dict(zip([col[0] for col in cursor.description], row)))
-                   for row in cursor.fetchall()]
+            rows = cursor.fetchall()
+            positions = []
+            for row in rows:
+                row_dict = dict(zip([col[0] for col in cursor.description], row))
+                if 'id' in row_dict:
+                    del row_dict['id']
+                positions.append(Position(**row_dict))
+            return positions
 
     @retry_on_error()
     def reset_position_adl(self, symbol: str) -> int:
