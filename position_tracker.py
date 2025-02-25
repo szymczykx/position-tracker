@@ -159,7 +159,10 @@ class PositionTracker:
             
             for closed_symbol in active_symbols - current_symbols:
                 self.db.close_position(closed_symbol)
-                self.send_notification(f"仓位已关闭：{closed_symbol}")
+                self.send_notification(
+                    f"仓位已关闭：{closed_symbol}\n"
+                    f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
             
             # 处理新开仓位
             new_positions = [pos for pos in current_positions 
@@ -174,7 +177,8 @@ class PositionTracker:
                         f"开仓价格: {pos.entry_price}\n"
                         f"杠杆倍数: {pos.leverage}x\n"
                         f"方向: {pos.position_side}\n"
-                        f"仓位大小: {pos.position_amount}"
+                        f"仓位大小: {pos.position_amount}\n"
+                        f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                     )
             
             # 处理仓位变动（加仓/减仓）
@@ -194,7 +198,8 @@ class PositionTracker:
                         f"变更前仓位: {old_amount}\n"
                         f"变更后仓位: {new_amount}\n"
                         f"开仓价格: {current_pos.entry_price}\n"
-                        f"方向: {current_pos.position_side}"
+                        f"方向: {current_pos.position_side}\n"
+                        f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                     )
         
         except Exception as e:
