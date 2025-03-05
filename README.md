@@ -69,10 +69,6 @@ NOTIFICATION_CONFIG = {
     'bark_url': 'BARK_SERVER_URL',   # Bark服务器地址
     'group': 'GROUP_NAME',           # 消息分组
     'icon': 'ICON_URL',              # 通知图标URL
-    
-    # Telegram配置
-    'telegram_bot_token': 'YOUR_TELEGRAM_BOT_TOKEN',  # 从BotFather获取的机器人Token
-    'telegram_chat_id': 'YOUR_TELEGRAM_CHAT_ID'       # 频道ID或聊天ID
 }
 
 # 程序配置
