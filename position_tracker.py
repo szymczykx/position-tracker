@@ -9,7 +9,7 @@ from functools import wraps
 from typing import List, Optional
 from config import *
 from models import Position
-from notifications import send_bark_notification, send_telegram_message
+from notifications import send_bark_notification
 
 # 设置绝对路径
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -53,18 +53,31 @@ class DatabaseManager:
     def init_database(self):
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS positions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                symbol TEXT NOT NULL,
-                entry_price REAL,
-                leverage INTEGER,
-                position_side TEXT,
-                break_even_price REAL,
-                position_amount REAL,
-                created_at TIMESTAMP
-            )
-            ''')
+            # 检查是否已存在表
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='positions'")
+            table_exists = cursor.fetchone() is not None
+            
+            if not table_exists:
+                cursor.execute('''
+                CREATE TABLE IF NOT EXISTS positions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    entry_price REAL,
+                    leverage INTEGER,
+                    position_side TEXT,
+                    break_even_price REAL,
+                    position_amount REAL,
+                    mark_price REAL,
+                    created_at TIMESTAMP
+                )
+                ''')
+            else:
+                # 检查mark_price字段是否存在，如果不存在则添加
+                cursor.execute("PRAGMA table_info(positions)")
+                columns = [col[1] for col in cursor.fetchall()]
+                if 'mark_price' not in columns:
+                    cursor.execute('ALTER TABLE positions ADD COLUMN mark_price REAL')
+            
             conn.commit()
 
     @retry_on_error()
@@ -75,9 +88,9 @@ class DatabaseManager:
                 data = position.to_dict()
                 cursor.execute('''
                 INSERT INTO positions (symbol, entry_price, leverage, position_side, 
-                                    break_even_price, position_amount, created_at)
+                                    break_even_price, position_amount, mark_price, created_at)
                 VALUES (:symbol, :entry_price, :leverage, :position_side, 
-                        :break_even_price, :position_amount, :created_at)
+                        :break_even_price, :position_amount, :mark_price, :created_at)
                 ''', data)
             conn.commit()
 
@@ -132,13 +145,10 @@ class PositionTracker:
         raise Exception(f"API请求失败: {response.status_code}")
 
     def send_notification(self, message: str):
-        """发送通知到多个渠道"""
+        """发送通知"""
         try:
             # 发送到Bark
             send_bark_notification("haywarPosition", message)
-            
-            # 发送到Telegram
-            send_telegram_message(message)
         except Exception as e:
             logger.error(f"发送通知失败: {str(e)}")
 
@@ -169,13 +179,15 @@ class PositionTracker:
             if new_positions:
                 self.db.insert_positions(new_positions)
                 for pos in new_positions:
+                    margin = (abs(pos.position_amount) * pos.mark_price) / pos.leverage
                     self.send_notification(
                         f"新建仓位\n"
                         f"交易对: {pos.symbol}\n"
                         f"开仓价格: {pos.entry_price}\n"
                         f"杠杆倍数: {pos.leverage}x\n"
                         f"方向: {pos.position_side}\n"
-                        f"仓位大小: {pos.position_amount}\n"
+                        f"保证金: {margin:.2f}\n"
+                        # f"仓位大小: {pos.position_amount}\n"
                         f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                     )
             

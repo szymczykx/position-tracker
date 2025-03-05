@@ -9,6 +9,7 @@ class Position:
     position_side: str
     break_even_price: float
     position_amount: float
+    mark_price: float = None
     created_at: datetime = None
 
     @classmethod
@@ -20,6 +21,7 @@ class Position:
             position_side=data['positionSide'],
             break_even_price=float(data['breakEvenPrice']),
             position_amount=float(data['positionAmount']),
+            mark_price=float(data['markPrice']) if 'markPrice' in data else None,
             created_at=datetime.now()
         )
 
@@ -31,5 +33,6 @@ class Position:
             'position_side': self.position_side,
             'break_even_price': self.break_even_price,
             'position_amount': self.position_amount,
+            'mark_price': self.mark_price,
             'created_at': self.created_at
         }
